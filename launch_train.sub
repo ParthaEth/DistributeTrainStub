@@ -1,0 +1,17 @@
+NUM_NODES = 2
+GPUS_PER_NODE = 2
+
+executable = launch_train.sh
+arguments = $(Process) $(Cluster) $(NUM_NODES) $(GPUS_PER_NODE) -alht
+
+error = logs/test_$(Process).err
+output = logs/test_$(Process).out
+log = logs/test_$(Process).log
+
+request_memory = 64000
+request_gpus = $(GPUS_PER_NODE)
+request_cpus = 4
+requirements = CUDADeviceName=="NVIDIA A100-SXM4-80GB"
+getenv = True
+
+queue $(NUM_NODES)
