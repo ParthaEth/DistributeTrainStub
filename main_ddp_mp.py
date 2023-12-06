@@ -20,14 +20,20 @@ def get_dataloader(root_path, batch_size, rank, world_size):
     return train_loader
 
 class SimpleNet(nn.Module):
-    def __init__(self):
+    def __init__(self, dev0, dev1):
+        self.dev0 = dev0
+        self.dev1 = dev1
         super(SimpleNet, self).__init__()
-        self.resnet = resnet50(pretrained=False)
+        self.resnet = resnet50(pretrained=False).to(dev0)
         in_features = self.resnet.fc.in_features
-        self.resnet.fc = nn.Linear(in_features, 1000)  # Change 1000 to the number of classes in your dataset
+        self.resnet.fc = nn.Linear(in_features, 1000).to(dev0)  # Change 1000 to the number of classes in your dataset
+        self.my_super_duper_top = nn.Linear(1000, 1000).to(dev1)
 
     def forward(self, x):
-        return self.resnet(x)
+        x = self.resnet(x.to(self.dev0))
+        x = self.my_super_duper_top(x.to(self.dev1))
+        return x
+
 
 def train(args):
     dist.init()
@@ -38,8 +44,8 @@ def train(args):
     print(f'Starting in machine {device} which is at rank {global_rank} of world size {world_size}')
     dist.print0(f'\n\nDistributing across {world_size} GPUs\n\n')
 
-    model = SimpleNet()
-    model = nn.parallel.DistributedDataParallel(model.to(device), device_ids=[rank,])
+    model = SimpleNet(rank, rank+1)
+    model = nn.parallel.DistributedDataParallel(model.to(device))
 
     optimizer = optim.SGD(model.parameters(), lr=args.lr)
     criterion = nn.CrossEntropyLoss()
@@ -50,7 +56,7 @@ def train(args):
     for epoch in range(args.epochs):
         pbar = tqdm.tqdm(train_loader)
         for data, target in pbar:
-            data, target = data.to(rank), target.to(rank)
+            target = target.to(rank + 1)
             optimizer.zero_grad()
             output = model(data)
             loss = criterion(output, target)
@@ -59,6 +65,7 @@ def train(args):
             pbar.set_description(f'CE loss: {loss.item():0.2f}')
 
     dist.cleanup()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Distributed DataParallel training script for ImageNet")

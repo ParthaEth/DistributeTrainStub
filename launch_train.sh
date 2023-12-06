@@ -73,4 +73,7 @@ echo ""
 
 
 /home/pghosh/miniconda3/envs/p_VideoGan80GB/bin/python -m torch.distributed.run --nnodes=$NUM_NODES \
---node_rank $runid --nproc_per_node=$NUM_GPU_PER_NODE --rdzv_endpoint="$ip_address:7745" main.py
+--node_rank $runid --nproc_per_node=$NUM_GPU_PER_NODE --rdzv_endpoint="$ip_address:7745" main_ddp.py
+
+#/home/pghosh/miniconda3/envs/p_VideoGan80GB/bin/python -m torch.distributed.run --nnodes=$NUM_NODES \
+#--node_rank $runid --nproc_per_node=1 --rdzv_endpoint="$ip_address:7745" main_ddp_mp.py
